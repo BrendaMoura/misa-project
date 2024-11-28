@@ -1,0 +1,44 @@
+{
+  "name": "13-restful",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "npx nodemon --watch src -e js,json,ts,yaml src/index.ts",
+    "start:prod": "node build/index.js",
+    "build": "npx tsc",
+    "format": "npx prettier --write src/",
+    "migrate": "npx prisma migrate dev"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@prisma/client": "^5.12.1",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "envalid": "^8.0.0",
+    "express": "^4.19.2",
+    "express-session": "^1.18.0",
+    "http-status-codes": "^2.3.0",
+    "joi": "^17.12.3"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.7",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/express-session": "^1.18.0",
+    "@types/node": "^20.12.7",
+    "nodemon": "^3.1.0",
+    "prettier": "^3.2.5",
+    "prisma": "^5.12.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.2"
+  },
+  "prisma": {
+    "seed": "npx ts-node prisma/seed.ts"
+  }
+}
