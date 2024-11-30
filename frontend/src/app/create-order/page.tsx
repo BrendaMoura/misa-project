@@ -1,34 +1,34 @@
 "use client";
 
+import React, { useState } from "react";
 import {
   Box,
+  Button,
   Container,
-  InputAdornment,
-  Menu,
-  MenuItem,
   Paper,
-  Select,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  TextField,
   Typography,
 } from "@mui/material";
-import { useState } from "react";
-import { useVendors } from "../hooks/useVendors";
-import { CreateOrderDto } from "../types/order";
-import ProductRow from "../components/ProductRow";
-import { useProducts } from "../hooks/useProducts";
-import { Product } from "../types/product";
-import SearchIcon from "@mui/icons-material/Search";
 
-const initialState: CreateOrderDto = {
+import { CreateOrderMapDto } from "../types/order";
+import { Product } from "../types/product";
+import ProductRow from "../components/ProductRow";
+import VendorList from "../components/VendorList";
+import SearchBar from "../components/SearchBar";
+import { useProducts } from "../hooks/useProducts";
+import SaveIcon from "@mui/icons-material/Save";
+import { createOrder } from "../services/order";
+import { useRouter } from "next/navigation";
+
+const initialState: CreateOrderMapDto = {
   vendorId: "",
   status: "Em andamento",
-  products: [],
+  products: new Map<string, { quantity: number }>(),
 };
 
 const getProductInfo = (products: Product[], productId: string) => {
@@ -36,84 +36,91 @@ const getProductInfo = (products: Product[], productId: string) => {
 };
 
 export default function CreateOrder() {
-  const [order, setOrder] = useState<CreateOrderDto>(initialState);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const open = Boolean(anchorEl);
-  const { vendors } = useVendors();
+  const router = useRouter();
+  const [order, setOrder] = useState<CreateOrderMapDto>(initialState);
+
   const { products } = useProducts();
 
-  const handleChange = (event: any) => {
+  const handleVendorSelection = (event: any) => {
     setOrder({ ...order, vendorId: event.target.value });
   };
 
+  const handleUpdateProductQuantity = (productId: string, newQuantity: number) => {
+    setOrder((prevOrder) => {
+      const orderProducts = new Map(prevOrder.products);
+
+      orderProducts.set(productId, { quantity: newQuantity });
+
+      return { ...prevOrder, products: orderProducts };
+    });
+  };
+
   const handleProductSelection = (productId: string) => {
-    const newProduct = {
-      productId: productId,
-      quantity: 1,
-    };
-    setOrder({ ...order, products: [...order.products, newProduct] });
-    setAnchorEl(null);
+    setOrder((prevOrder) => {
+      const orderProducts = new Map(prevOrder.products);
+
+      if (orderProducts.has(productId)) {
+        const existingProduct = orderProducts.get(productId)!;
+        orderProducts.set(productId, { quantity: existingProduct.quantity + 1 });
+      } else {
+        orderProducts.set(productId, { quantity: 1 });
+      }
+
+      return { ...prevOrder, products: orderProducts };
+    });
   };
 
-  const handleClickSearchBar = (e: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(e.currentTarget);
-    e.stopPropagation();
+  const handleDeleteProduct = (productId: string) => {
+    setOrder((prevOrder) => {
+      const orderProducts = new Map(prevOrder.products);
+      orderProducts.delete(productId);
+      return { ...prevOrder, products: orderProducts };
+    });
   };
 
-  const handleCloseSearchMenu = () => {
-    setAnchorEl(null);
+  const handleSaveOrder = () => {
+    if (!order.vendorId || order.products.size === 0)
+      return alert("Selecione o vendendor e adicione produtos.");
+    try {
+      const savedOrder = createOrder(order);
+      setOrder(initialState);
+      router.push("/");
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   return (
     <Container sx={{ marginY: 5 }}>
-      <Typography variant="h5" sx={{ fontWeight: "bold", m: "auto" }} component="h2">
-        Criar Pedido
-      </Typography>
+      <Box
+        sx={{
+          width: "100%",
+          m: "auto",
+          display: "flex",
+          justifyContent: "space-between",
+        }}
+      >
+        <Typography variant="h5" sx={{ fontWeight: "bold" }} component="h2">
+          Criar Pedido
+        </Typography>
 
-      <Typography variant="body2" component="h2" sx={{ mt: 6, mb: 2, fontWeight: "bold" }}>
-        Fornecedor
-      </Typography>
+        <Button
+          variant="contained"
+          startIcon={<SaveIcon />}
+          onClick={handleSaveOrder}
+          sx={{ textTransform: "none" }}
+        >
+          Salvar produto
+        </Button>
+      </Box>
 
-      <Select displayEmpty value={order.vendorId} onChange={handleChange} sx={{ width: "100%" }}>
-        <MenuItem value="" disabled>
-          Selecione o fornecedor
-        </MenuItem>
-        {vendors?.map((vendor) => (
-          <MenuItem key={vendor.id} value={vendor.id}>
-            {vendor.name}
-          </MenuItem>
-        ))}
-      </Select>
+      <VendorList handleChange={handleVendorSelection} vendorId={order.vendorId} />
 
       <Typography variant="body2" component="h2" sx={{ marginY: 4, fontWeight: "bold" }}>
         Produtos
       </Typography>
 
-      <Box sx={{ display: "flex", width: "100%", justifyContent: "end", mb: 5 }}>
-        <TextField
-          id="filled-search"
-          placeholder="Pesquise pelo produto"
-          type="search"
-          variant="outlined"
-          size="small"
-          onClick={handleClickSearchBar}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
-
-        <Menu id="products" anchorEl={anchorEl} open={open} onClose={handleCloseSearchMenu}>
-          {products?.map((product) => (
-            <MenuItem key={product.id} onClick={() => handleProductSelection(product.id)}>
-              {product.name}
-            </MenuItem>
-          ))}
-        </Menu>
-      </Box>
+      <SearchBar handleProductSelection={handleProductSelection} />
 
       <TableContainer component={Paper}>
         <Table sx={{ minWidth: 650 }} aria-label="simple table">
@@ -127,9 +134,17 @@ export default function CreateOrder() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {order.products.map((product) => (
-              <ProductRow product={getProductInfo(products, product.productId)!} />
-            ))}
+            {[...order.products].map(([productId, { quantity }]) => {
+              const productInfo = getProductInfo(products, productId)!;
+              return (
+                <ProductRow
+                  product={productInfo}
+                  productQuantity={quantity}
+                  handleUpdateProductQuantity={handleUpdateProductQuantity}
+                  handleDeleteProduct={handleDeleteProduct}
+                />
+              );
+            })}
           </TableBody>
         </Table>
       </TableContainer>

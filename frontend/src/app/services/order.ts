@@ -1,4 +1,4 @@
-import { CreateOrderDto, Order, OrderProduct } from "../types/order";
+import { CreateOrderMapDto, Order, OrderProduct } from "../types/order";
 import api from "./api";
 
 export async function getOrders(): Promise<Order[]> {
@@ -9,7 +9,15 @@ export async function getOrderProducts(id: string): Promise<OrderProduct[]> {
   return api.get(`/orders/products/${id}`).then((response) => response.data);
 }
 
-export async function createOrder(order: CreateOrderDto) {
+export async function createOrder(mapOrder: CreateOrderMapDto) {
+  const order = {
+    ...mapOrder,
+    products: Array.from(mapOrder.products.entries()).map(([productId, { quantity }]) => ({
+      productId,
+      quantity,
+    })),
+  };
+
   return api.post("/orders", order).then((response) => response.data);
 }
 

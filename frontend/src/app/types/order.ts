@@ -11,6 +11,12 @@ export type CreateOrderDto = {
   products: CreateOrderProductDto[];
 };
 
+export type CreateOrderMapDto = {
+  vendorId: string;
+  status: string;
+  products: Map<string, { quantity: number }>;
+};
+
 export type UpdateOrderDto = Pick<Order, "status">;
 
 export type CreateOrderProductDto = {

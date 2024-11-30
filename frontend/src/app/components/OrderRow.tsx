@@ -42,7 +42,7 @@ const OrderRow = ({ order }: OrderRowProps) => {
         <Chip label={order.status} color={getChipColor(order.status)} />
       </TableCell>
       <TableCell align="right">
-        <OptionButton orderId={order.id} />
+        <OptionButton orderId={order.id} initialStatus={order.status} />
       </TableCell>
     </TableRow>
   );
